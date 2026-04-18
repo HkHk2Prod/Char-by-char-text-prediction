@@ -1,0 +1,36 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta" 
+
+[project]
+name            = "char-predict"
+version         = "0.1.0"
+description     = "Character-level text prediction with various NN architectures"
+readme          = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "torch>=2.3.0",
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "jupyter>=1.0",
+    "matplotlib>=3.8",
+]
+gpu = [
+    "torch>=2.3.0",   # overridden by Makefile with --index-url for CUDA build
+]
+
+[project.scripts]
+train    = "scripts.train:main"
+generate = "scripts.generate:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
