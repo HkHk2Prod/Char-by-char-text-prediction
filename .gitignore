@@ -206,9 +206,16 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+<<<<<<< add-save,-predict-and-scheduler
 
+=======
+>>>>>>> main
 # Project specific
 data/raw/
 data/processed/
 Model_files/
+<<<<<<< add-save,-predict-and-scheduler
 *.ckpt
+=======
+*.ckpt
+>>>>>>> main
