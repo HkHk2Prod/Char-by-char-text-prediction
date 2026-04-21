@@ -1,4 +1,5 @@
 import argparse
+import random
 from pathlib import Path
 
 import torch
@@ -28,7 +29,7 @@ def parse_args():
     p = argparse.ArgumentParser(description="Train a character-level model.")
 
     p.add_argument("--model", required=True, choices=["rnn"])
-    p.add_argument("--dataset", choices=["tiny_shakespeare"], default="tiny_shakespeare")
+    p.add_argument("--dataset", choices=["test", "shakespeare"], default="test")
     p.add_argument("--val_ratio", default=0.1)
     p.add_argument("--test_ratio", default=0.1)
     p.add_argument("--data_dir", default="data/raw")
@@ -38,14 +39,29 @@ def parse_args():
 
     return p.parse_args()
 
+def sample_prompts(text: str, n: int = 3, length: int = 20) -> list[str]:
+    if len(text) < length:
+        raise ValueError(
+            f"Text too short for prompt length {length} — "
+            f"got {len(text)} chars, need at least {length}."
+        )
+    max_start = len(text) - length
+    n         = min(n, max_start + 1)   # can't have more prompts than positions
+    starts    = random.sample(range(max_start + 1), n)
+    return [text[i:i + length] for i in starts]
+
 def main():
     args = parse_args()
     data_dir = Path(args.data_dir)
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    prompts = None
 
     match args.dataset:
-        case "tiny_shakespeare":
+        case "shakespeare":
             file_name = "tiny_shakespeare.txt"
+            prompts = ["ROMEO:", "To be or not to be"]
+        case "test":
+            file_name = "test_text.txt"
         case _:
             raise ValueError("Unknown dataset")
 
@@ -70,7 +86,7 @@ def main():
     predictor = Predictor(model, vocab, device=device)
 
     cfg = TrainerConfig()
-    prompts = ["ROMEO:", "To be or not to be"]
+    prompts = prompts or sample_prompts(datasets[2].text or "") # We sample_prompts from test text.
     callbacks = [
         ConfigSaverCallback(),
         ModelInfoCallback(),

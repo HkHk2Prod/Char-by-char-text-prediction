@@ -1,6 +1,10 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 import torch
 from torch.utils.data import Dataset
-from pathlib import Path
+
 
 class CharVocab:
 
@@ -38,6 +42,7 @@ class TextDataset(Dataset):
         if file_path:
             with open(file_path, 'r', encoding='utf-8') as f:
                 self.text = f.read()
+        assert(isinstance(self.text,str))
         self.vocab = vocab or CharVocab(self.text)
 
     def __len__(self):
@@ -60,7 +65,7 @@ class TextDataset(Dataset):
                             seq_length: int=100,
                             vocab: CharVocab | None=None,
                             val_test_ratio: tuple[float, float]=(0.1, 0.1)
-        ):
+        ) -> tuple[TextDataset, TextDataset, TextDataset]:
         train_ratio = 1 - sum(val_test_ratio)
         val_ratio, test_ratio = val_test_ratio
         assert train_ratio >= 0 and val_ratio >= 0 and test_ratio >=0
@@ -87,4 +92,5 @@ class TextDataset(Dataset):
                               vocab=vocab
                     )
         return train_ds, val_ds, test_ds
+
         
