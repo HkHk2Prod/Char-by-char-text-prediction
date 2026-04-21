@@ -1,5 +1,9 @@
 from abc import ABC
+from pathlib import Path
+
+import torch
 import torch.nn as nn
+
 
 class BaseCharModel(ABC, nn.Module):
     """
@@ -7,11 +11,31 @@ class BaseCharModel(ABC, nn.Module):
     I made it just in case I will need something later.
     """
 
-    def __init__(self, vocab_size: int, cfg: dict):
+    model_name: str = ""
+
+    def __init__(self, cfg: dict):
         super().__init__()
-        self.vocab_size = vocab_size
         self.cfg = cfg
 
+    def save(self, file_path: Path | str) -> None:
+        torch.save({
+            "state_dict": self.state_dict(),
+            "config": self.cfg, 
+            "model_name": self.model_name
+            },
+            file_path
+        )
+
+    @classmethod
+    def load(cls, file_path: Path | str) -> "BaseCharModel":
+        from src.models.registry import registry
+
+        checkpoint = torch.load(file_path, map_location="cpu")
+        model = registry.build(checkpoint["model_name"], checkpoint["config"])
+        model.load_state_dict(checkpoint["state_dict"])
+        return model
+    
     def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
+    
     
