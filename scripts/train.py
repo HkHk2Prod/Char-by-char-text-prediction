@@ -1,11 +1,28 @@
 import argparse
-
 from pathlib import Path
+
+import torch
 from torch.utils.data import DataLoader
 
 from src.data.dataset import TextDataset
+from src.inference.predictor import Predictor
+from src.models.autodiscover import autodiscover
+from src.models.registry import registry
 from src.models.RNN import RNNModel
+from src.training.callbacks import (
+    BatchLogCallback,
+    CheckpointCallback,
+    ConfigSaverCallback,
+    EarlyStoppingCallback,
+    EpochProgressCallback,
+    EvalCallback,
+    GenerationCallback,
+    LogCallback,
+    ModelInfoCallback,
+    TestEvalCallback,
+)
 from src.training.trainer import Trainer, TrainerConfig
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Train a character-level model.")
@@ -17,12 +34,15 @@ def parse_args():
     p.add_argument("--data_dir", default="data/raw")
     p.add_argument("--seq_length", default=100)
     p.add_argument("--batch_size", type=int, default=64)
+    p.add_argument("--device", default=None)
 
     return p.parse_args()
 
 def main():
     args = parse_args()
     data_dir = Path(args.data_dir)
+    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+
     match args.dataset:
         case "tiny_shakespeare":
             file_name = "tiny_shakespeare.txt"
@@ -35,25 +55,41 @@ def main():
                                             ) 
 
     vocab = datasets[0].vocab
-    vocab_size = len(vocab)
 
     loaders = {name: DataLoader(
         ds,
         batch_size=args.batch_size,
-        shuffle=(name=="train"),
+        shuffle=(name == "train"),
         num_workers=4,
-        pin_memory=True,
+        drop_last=(name != "train"),
+        pin_memory=device.startswith("cuda"),
     ) for name, ds in zip(["train", "val", "test"], datasets)}
 
-    cfg = TrainerConfig()
+    autodiscover()
+    model = RNNModel(cfg={"vocab_size": len(vocab)})
+    predictor = Predictor(model, vocab, device=device)
 
-    model = RNNModel(vocab_size=vocab_size,
-                     cfg={})
+    cfg = TrainerConfig()
+    prompts = ["ROMEO:", "To be or not to be"]
+    callbacks = [
+        ConfigSaverCallback(),
+        ModelInfoCallback(),
+        EpochProgressCallback(),
+        BatchLogCallback(log_every=50),    # ← new
+        EvalCallback(loaders["val"]),
+        LogCallback(),
+        CheckpointCallback(),
+        GenerationCallback(predictor=predictor, prompts=prompts),
+        EarlyStoppingCallback(patience=5),
+        TestEvalCallback(loaders["test"], predictor=predictor, prompts=prompts),
+    ]
+
 
     trainer=Trainer(model=model, 
             train_loader=loaders["train"], 
-            val_loader=loaders["val"], 
-            cfg=cfg)
+            cfg=cfg,
+            callbacks=callbacks,
+            device=device)
     
     trainer.train()
 
@@ -62,4 +98,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-       
+              
