@@ -138,14 +138,24 @@ def main() -> None:
         ),
         ModelInfoCallback(vocab=vocab),
         EpochProgressCallback(),
-        BatchLogCallback(log_every=None),
-        EvalCallback(loaders["val"]),
+        BatchLogCallback(log_every=cfg.log_every),
+        EvalCallback(loaders["val"], eval_every=cfg.eval_every),
         LogCallback(),
-        CheckpointCallback(),
-        GenerationCallback(predictor=predictor, prompts=prompts),
-        EarlyStoppingCallback(patience=5),
-        TestEvalCallback(loaders["test"], predictor=predictor, prompts=prompts),
+        CheckpointCallback(save_every=cfg.save_every),
         SchedulerCallback(scheduler=scheduler),
+        GenerationCallback(
+            predictor=predictor,
+            prompts=prompts,
+            seq_length=cfg.gen_length,
+            every=cfg.gen_every,
+        ),
+        EarlyStoppingCallback(patience=cfg.patience),
+        TestEvalCallback(
+            loaders["test"],
+            predictor=predictor,
+            prompts=prompts,
+            seq_length=cfg.gen_length,
+        ),
     ]
 
     trainer = Trainer(
