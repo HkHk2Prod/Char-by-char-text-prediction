@@ -9,26 +9,37 @@ data:
 	$(PYTHON) src.data.preprocessing
 
 # ── Individual model training ─────────────────────────────────────────────────
-
+ 
 train-rnn:
 	$(PYTHON) scripts.train \
-		--config   configs/rnn_large.yaml
-
+		--config   configs/rnn_large.yaml \
+		--dataset $(DATASET)
+ 
 train-gru:
 	$(PYTHON) scripts.train \
-		--config   configs/gru_large.yaml
-
+		--config   configs/gru_large.yaml \
+		--dataset $(DATASET)
+ 
 train-lstm:
 	$(PYTHON) scripts.train \
-		--config   configs/lstm_large.yaml
-
+		--config   configs/lstm_large.yaml \
+		--dataset $(DATASET)
+ 
 train-transformer:
 	$(PYTHON) scripts.train \
-		--config   configs/transformer_large.yaml
-
-# ── Train all sequentially ────────────────────────────────────────────────────
-
-train-all: train-rnn train-gru train-lstm train-transformer
+		--config   configs/transformer_large.yaml \
+		--dataset $(DATASET)
+ 
+# ── Train all models on a given dataset ───────────────────────────────────────
+# Usage:
+#   make train-all-on                          # uses DATASET=shakespeare
+#   make train-all-on DATASET=my_corpus
+ 
+train-all-on: train-rnn train-gru train-lstm train-transformer
+ 
+# ── Train all on default dataset ──────────────────────────────────────────────
+ 
+train-all: train-all-on
 
 # ── Quick smoke test (CPU, few epochs) ───────────────────────────────────────
 
