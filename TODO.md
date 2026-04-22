@@ -1,2 +1,2 @@
 [ ] Add autodownload and preprocessing
-[ ] Add prompt checker
+[ ] Test kaggle gpu

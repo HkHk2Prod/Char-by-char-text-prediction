@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import torch
 from torch.utils.data import DataLoader
 
+from src.data.dataset import CharVocab
 from src.models.base import BaseCharModel
 from src.utils import detach_state
 
@@ -52,6 +53,9 @@ class Callback:
 
 
 class ModelInfoCallback(Callback):
+    def __init__(self, vocab: CharVocab):
+        self.vocab = vocab
+
     def on_train_start(self, trainer: "Trainer") -> None:
         model = trainer.model
         cfg = trainer.cfg
@@ -62,7 +66,8 @@ class ModelInfoCallback(Callback):
         print(f"  device     : {trainer.device}")
         print(f"  epochs     : {cfg.epochs}")
         print(f"  batches    : {len(trainer.train_loader)}")
-        print(f"  save dir    : {trainer.save_dir}")
+        print(f"  save dir   : {trainer.save_dir}")
+        print(f"  Vocabulary : {self.vocab}")
         print(f"{'═' * 55}\n")
 
 
@@ -126,15 +131,16 @@ class EpochProgressCallback(Callback):
 
 
 class BatchLogCallback(Callback):
-    """Prints loss and perplexity every N batches during training."""
+    """Prints loss and perplexity every N batches during training. log_every = None prints 10 msg per epoch."""
 
-    def __init__(self, log_every: int = 50):
+    def __init__(self, log_every: int | None = None):
         self.log_every = log_every
 
     def on_batch_end(
         self, epoch: int, step: int, loss: float, trainer: "Trainer"
     ) -> None:
-        if step % self.log_every != 0:
+        log_every = self.log_every or max(1, len(trainer.train_loader) // 10)
+        if step % log_every != 0:
             return
         print(
             f"  step {step:5d}/{len(trainer.train_loader)}"
