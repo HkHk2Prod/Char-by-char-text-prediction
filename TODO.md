@@ -1,3 +1,2 @@
-[ ] Add model registry
 [ ] Add autodownload and preprocessing
-[ ]
+[ ] Add prompt checker

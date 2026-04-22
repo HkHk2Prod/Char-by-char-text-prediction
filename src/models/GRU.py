@@ -6,10 +6,12 @@ from src.models.registry import registry
 from .base import BaseCharModel
 
 
-@registry.register("rnn")
-class RNNModel(BaseCharModel):
+@registry.register("gru")
+class GRUModel(BaseCharModel):
     """
-    Simple RNN with embedding, dropout, and few layers.
+    GRU with embedding, dropout, and multiple layers.
+    Like RNN, hidden state is a single tensor — no cell state like LSTM.
+    Typically outperforms RNN and approaches LSTM with fewer parameters.
     """
 
     def __init__(self, cfg: dict):
@@ -23,12 +25,12 @@ class RNNModel(BaseCharModel):
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
 
-        self.rnn = nn.RNN(
+        self.gru = nn.GRU(
             input_size=self.embed_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             dropout=self.dropout if self.num_layers > 1 else 0.0,
-            batch_first=True,  # input/output shape: (batch, seq, features)
+            batch_first=True,
         )
 
         self.dropout_layer = nn.Dropout(self.dropout)
@@ -40,7 +42,7 @@ class RNNModel(BaseCharModel):
         h: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         x = self.embedding(x)
-        output, h = self.rnn(x, h)
+        output, h = self.gru(x, h)
         output = self.dropout_layer(output)
         logits = self.head(output)
         assert isinstance(h, torch.Tensor)

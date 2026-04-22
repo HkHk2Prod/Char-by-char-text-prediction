@@ -13,49 +13,40 @@ from src.utils import detach_state
 
 @dataclass
 class TrainerConfig:
-    # Optimizer cfg
-    learning_rate:    float = 3e-4
-    weight_decay:     float = 1e-2
-    grad_clip:        float = 5.0
+    grad_clip: float = 5.0
+    epochs: int = 20
+    save_dir: Path | str = "Model_files"
 
-    # Training cfg
-    epochs:           int   = 20
-
-    # save_dir stores the best model.
-    save_dir: Path | str = "Model_files" 
 
 class Trainer:
 
     def __init__(
         self,
-        model:        BaseCharModel,
+        model: BaseCharModel,
         train_loader: DataLoader,
-        cfg:          TrainerConfig | None = None,
-        device:       str | None = None,
-        callbacks:    list[Callback] | None = None,
+        optimizer: torch.optim.Optimizer,
+        cfg: TrainerConfig | None = None,
+        device: str | None = None,
+        callbacks: list[Callback] | None = None,
     ):
-        
-        self.model        = model
+
+        self.model = model
         self.train_loader = train_loader
-        self.cfg          = cfg or TrainerConfig()
-        self.device       = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.callbacks    = callbacks or []
-        self._stop        = False
+        self.cfg = cfg or TrainerConfig()
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.callbacks = callbacks or []
+        self._stop = False
 
         self.model.to(self.device)
 
-        self.optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr           = self.cfg.learning_rate,
-            weight_decay = self.cfg.weight_decay,
-        )
+        self.optimizer = optimizer
         self.criterion = nn.CrossEntropyLoss()
 
         # Timestamped run directory
-        ts           = time.strftime("%Y%m%d_%H%M%S")
+        ts = time.strftime("%Y%m%d_%H%M%S")
         self.save_dir = Path(self.cfg.save_dir) / f"{model.model_name}_{ts}"
         self.save_dir.mkdir(parents=True, exist_ok=True)
- 
+
     def stop(self) -> None:
         self._stop = True
 
@@ -97,17 +88,13 @@ class Trainer:
             self.optimizer.step()
 
             total_loss += loss.item()
-            total_acc  += (logits.detach().argmax(-1) == y).float().mean().item()
+            total_acc += (logits.detach().argmax(-1) == y).float().mean().item()
 
             self._fire("on_batch_end", epoch, i, total_loss / i)
 
         n = len(self.train_loader)
         return {"loss": total_loss / n, "acc": total_acc / n}
-        
+
     def _fire(self, hook: str, *args) -> None:
         for cb in self.callbacks:
-            getattr(cb, hook)(*args, trainer=self) 
-
-
-
-
+            getattr(cb, hook)(*args, trainer=self)
