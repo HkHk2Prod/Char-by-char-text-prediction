@@ -1,0 +1,24 @@
+model:        gru
+epochs:       50
+lr:           3e-4
+weight_decay: 1e-2
+grad_clip:    5.0
+
+# Model
+embed_size:   128
+hidden_size:  1024
+num_layers:   3
+dropout:      0.3
+
+# Data
+seq_len:      200
+batch_size:   128
+
+# Logging
+log_every:    null
+eval_every:   1
+save_every:   5
+gen_every:    5
+gen_length:   500
+patience:     10
+
