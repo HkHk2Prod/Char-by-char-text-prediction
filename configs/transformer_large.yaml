@@ -1,0 +1,25 @@
+model:        transformer
+epochs:       100
+lr:           1e-3
+weight_decay: 1e-1
+grad_clip:    1.0
+
+# Model
+embed_size:   512
+num_heads:    8
+num_layers:   6
+ffn_dim:      2048
+dropout:      0.1
+
+# Data
+seq_len:      256
+batch_size:   128
+
+# Logging
+log_every:    null
+eval_every:   1
+save_every:   5
+gen_every:    5
+gen_length:   500
+patience:     15
+

@@ -1,4 +1,3 @@
-import argparse
 import random
 from pathlib import Path
 
@@ -22,40 +21,8 @@ from src.training.callbacks import (
     SchedulerCallback,
     TestEvalCallback,
 )
+from src.training.config import RunConfig
 from src.training.trainer import Trainer, TrainerConfig
-
-
-def parse_args():
-    p = argparse.ArgumentParser(description="Train a character-level model.")
-
-    p.add_argument("--model", required=True)
-    p.add_argument("--dataset", choices=["test", "shakespeare"], default="test")
-    p.add_argument("--val_ratio", type=float, default=0.1)
-    p.add_argument("--test_ratio", type=float, default=0.1)
-    p.add_argument("--data_dir", default="data/raw")
-    p.add_argument("--seq_len", type=int, default=100)
-    p.add_argument("--batch_size", type=int, default=64)
-    p.add_argument("--device", default=None)
-    p.add_argument("--lower_case", action="store_true")
-
-    # Model hyperparameters
-    p.add_argument("--embed_size", type=int, default=64)
-    p.add_argument("--hidden_size", type=int, default=256)
-    p.add_argument("--num_layers", type=int, default=2)
-    p.add_argument("--dropout", type=float, default=0.3)
-
-    # Transformer-specific
-    p.add_argument("--num_heads", type=int, default=4)
-    p.add_argument("--ffn_dim", type=int, default=512)
-
-    # Trainer params
-    p.add_argument("--epochs", type=int, default=20)
-    p.add_argument("--lr", type=float, default=3e-4)
-    p.add_argument("--weight_decay", type=float, default=1e-2)
-    p.add_argument("--save_dir", default="Model_files")
-    p.add_argument("--grad_clip", type=float, default=5.0)
-
-    return p.parse_args()
 
 
 def sample_prompts(text: str, n: int = 3, length: int = 20) -> list[str]:
@@ -101,28 +68,13 @@ def prepare_prompts(
     return valid
 
 
-def build_model_config(args: argparse.Namespace) -> dict:
-    """Assemble model config from CLI args."""
-    return {
-        "model": args.model,
-        "embed_size": args.embed_size,
-        "hidden_size": args.hidden_size,
-        "num_layers": args.num_layers,
-        "dropout": args.dropout,
-        "num_heads": args.num_heads,
-        "ffn_dim": args.ffn_dim,
-        "seq_len": args.seq_len,
-    }
-
-
-def main():
-    args = parse_args()
-    data_dir = Path(args.data_dir)
-    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+def main() -> None:
+    cfg = RunConfig.parse()
+    data_dir = Path(cfg.data_dir)
+    device = cfg.device or ("cuda" if torch.cuda.is_available() else "cpu")
     prompts = None
-    model_cfg = build_model_config(args)
 
-    match args.dataset:
+    match cfg.dataset:
         case "shakespeare":
             file_name = "tiny_shakespeare.txt"
             prompts = ["ROMEO:", "To be or not to be"]
@@ -133,9 +85,9 @@ def main():
 
     datasets = TextDataset.generate_test_train(
         file_path=data_dir / file_name,
-        seq_len=args.seq_len,
-        val_test_ratio=(args.val_ratio, args.test_ratio),
-        lower_case=args.lower_case,
+        seq_len=cfg.seq_len,
+        val_test_ratio=(cfg.val_ratio, cfg.test_ratio),
+        lower_case=cfg.lower_case,
     )
 
     vocab = datasets[0].vocab
@@ -143,7 +95,7 @@ def main():
     loaders = {
         name: DataLoader(
             ds,
-            batch_size=args.batch_size,
+            batch_size=cfg.batch_size,
             shuffle=(name == "train"),
             num_workers=4,
             drop_last=(
@@ -159,26 +111,25 @@ def main():
     }
 
     autodiscover()
-    model_cfg["vocab_size"] = len(vocab)
-    model = registry.build(args.model, config=model_cfg)
+    model = registry.build(cfg.model, config=cfg.model_config(len(vocab)))
     predictor = make_predictor(model, vocab, device=device)
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=args.lr,
-        weight_decay=args.weight_decay,
+        lr=cfg.lr,
+        weight_decay=cfg.weight_decay,
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.epochs)
 
     trainer_cfg = TrainerConfig(
-        grad_clip=args.grad_clip,
-        epochs=args.epochs,
-        save_dir=args.save_dir,
+        grad_clip=cfg.grad_clip,
+        epochs=cfg.epochs,
+        save_dir=cfg.save_dir,
     )
     prompts = prompts or sample_prompts(
         datasets[2].text or ""
     )  # We sample_prompts from test text.
-    prompts = prepare_prompts(prompts=prompts, vocab=vocab, lower_case=args.lower_case)
+    prompts = prepare_prompts(prompts=prompts, vocab=vocab, lower_case=cfg.lower_case)
 
     callbacks = [
         ConfigSaverCallback(
