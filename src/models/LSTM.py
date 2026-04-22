@@ -6,10 +6,11 @@ from src.models.registry import registry
 from .base import BaseCharModel
 
 
-@registry.register("rnn")
+@registry.register("lstm")
 class RNNModel(BaseCharModel):
     """
-    Simple RNN with embedding, dropout, and few layers.
+    LSTM with embedding, dropout, and multiple layers.
+    Hidden state is a tuple (h, c) unlike RNN's single tensor.
     """
 
     def __init__(self, cfg: dict):
@@ -23,7 +24,7 @@ class RNNModel(BaseCharModel):
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
 
-        self.rnn = nn.RNN(
+        self.rnn = nn.LSTM(
             input_size=self.embed_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
@@ -37,11 +38,11 @@ class RNNModel(BaseCharModel):
     def forward(
         self,
         x: torch.Tensor,
-        h: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        h: tuple[torch.Tensor, torch.Tensor] | None = None,
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         x = self.embedding(x)
         output, h = self.rnn(x, h)
         output = self.dropout_layer(output)
         logits = self.head(output)
-        assert isinstance(h, torch.Tensor)
+        assert isinstance(h, tuple)
         return logits, h

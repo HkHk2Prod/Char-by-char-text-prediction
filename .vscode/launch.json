@@ -7,7 +7,44 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/train.py",
             "args": [
-                "--model",      "rnn"
+                "--model",      "rnn",
+                "--lower_case"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Train LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/train.py",
+            "args": [
+                "--model",      "lstm",
+                "--lower_case"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Train GRU",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/train.py",
+            "args": [
+                "--model",      "gru",
+                "--lower_case"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Train Transformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/train.py",
+            "args": [
+                "--model",      "transformer",
+                "--lower_case"
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
