@@ -12,6 +12,8 @@ class RNNModel(BaseCharModel):
     Simple RNN with embedding, dropout, and few layers.
     """
 
+    is_recurrent = True
+
     def __init__(self, cfg: dict):
         super().__init__(cfg=cfg)
 

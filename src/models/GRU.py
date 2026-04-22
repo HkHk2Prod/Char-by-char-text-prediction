@@ -14,6 +14,8 @@ class GRUModel(BaseCharModel):
     Typically outperforms RNN and approaches LSTM with fewer parameters.
     """
 
+    is_recurrent = True
+
     def __init__(self, cfg: dict):
         super().__init__(cfg=cfg)
 
