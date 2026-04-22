@@ -6,10 +6,9 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.data.dataset import TextDataset
-from src.inference.predictor import Predictor
+from src.inference.predictor import make_predictor
 from src.models.autodiscover import autodiscover
 from src.models.registry import registry
-from src.models.RNN import RNNModel
 from src.training.callbacks import (
     BatchLogCallback,
     CheckpointCallback,
@@ -31,10 +30,10 @@ def parse_args():
 
     p.add_argument("--model", required=True)
     p.add_argument("--dataset", choices=["test", "shakespeare"], default="test")
-    p.add_argument("--val_ratio", default=0.1)
-    p.add_argument("--test_ratio", default=0.1)
+    p.add_argument("--val_ratio", type=float, default=0.1)
+    p.add_argument("--test_ratio", type=float, default=0.1)
     p.add_argument("--data_dir", default="data/raw")
-    p.add_argument("--seq_length", default=100)
+    p.add_argument("--seq_length", type=int, default=100)
     p.add_argument("--batch_size", type=int, default=64)
     p.add_argument("--device", default=None)
     p.add_argument("--lower_case", action="store_true")
@@ -92,7 +91,13 @@ def main():
             batch_size=args.batch_size,
             shuffle=(name == "train"),
             num_workers=4,
-            drop_last=(name != "train"),
+            drop_last=(
+                name != "train"
+            ),  # During the test/val the hidden state is transfered from one batch to another.
+            # The last batch has smaller size, so it creates a mismatch and error.
+            # I did the easiest fix to drop the last batch.
+            # The training loop resets the hidden state(since it shuffles),
+            # so there is no problem with the mismatch.
             pin_memory=device.startswith("cuda"),
         )
         for name, ds in zip(["train", "val", "test"], datasets)
@@ -101,7 +106,7 @@ def main():
     autodiscover()
     model_cfg["vocab_size"] = len(vocab)
     model = registry.build(args.model, config=model_cfg)
-    predictor = Predictor(model, vocab, device=device)
+    predictor = make_predictor(model, vocab, device=device)
 
     optimizer = torch.optim.AdamW(
         model.parameters(),

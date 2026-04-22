@@ -26,6 +26,8 @@ class TransformerModel(BaseCharModel):
         → Linear head  (weights tied to token embedding)
     """
 
+    is_recurrent = False
+
     def __init__(self, cfg: dict):
         super().__init__(cfg=cfg)
 

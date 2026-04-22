@@ -11,7 +11,7 @@ from src.models.base import BaseCharModel
 from src.utils import detach_state
 
 if TYPE_CHECKING:
-    from src.inference.predictor import Predictor
+    from src.inference.predictor import BasePredictor
     from src.training.trainer import Trainer
 
 
@@ -277,7 +277,7 @@ class GenerationCallback(Callback):
 
     def __init__(
         self,
-        predictor: "Predictor",
+        predictor: "BasePredictor",
         prompts: list[str],
         seq_length: int = 200,
         every: int = 1,
@@ -348,7 +348,7 @@ class TestEvalCallback(Callback):
     def __init__(
         self,
         test_loader: DataLoader,
-        predictor: "Predictor",
+        predictor: "BasePredictor",
         prompts: list[str],
         seq_length: int = 200,
         temperature: float = 1.0,

@@ -7,11 +7,13 @@ from .base import BaseCharModel
 
 
 @registry.register("lstm")
-class RNNModel(BaseCharModel):
+class LSTMModel(BaseCharModel):
     """
     LSTM with embedding, dropout, and multiple layers.
     Hidden state is a tuple (h, c) unlike RNN's single tensor.
     """
+
+    is_recurrent = True
 
     def __init__(self, cfg: dict):
         super().__init__(cfg=cfg)
