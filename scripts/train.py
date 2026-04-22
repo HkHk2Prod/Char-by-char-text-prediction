@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from src.data.dataset import TextDataset
+from src.data.dataset import CharVocab, TextDataset
 from src.inference.predictor import make_predictor
 from src.models.autodiscover import autodiscover
 from src.models.registry import registry
@@ -33,7 +33,7 @@ def parse_args():
     p.add_argument("--val_ratio", type=float, default=0.1)
     p.add_argument("--test_ratio", type=float, default=0.1)
     p.add_argument("--data_dir", default="data/raw")
-    p.add_argument("--seq_length", type=int, default=100)
+    p.add_argument("--seq_len", type=int, default=100)
     p.add_argument("--batch_size", type=int, default=64)
     p.add_argument("--device", default=None)
     p.add_argument("--lower_case", action="store_true")
