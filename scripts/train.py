@@ -38,6 +38,16 @@ def parse_args():
     p.add_argument("--device", default=None)
     p.add_argument("--lower_case", action="store_true")
 
+    # Model hyperparameters
+    p.add_argument("--embed_size", type=int, default=64)
+    p.add_argument("--hidden_size", type=int, default=256)
+    p.add_argument("--num_layers", type=int, default=2)
+    p.add_argument("--dropout", type=float, default=0.3)
+
+    # Transformer-specific
+    p.add_argument("--num_heads", type=int, default=4)
+    p.add_argument("--ffn_dim", type=int, default=512)
+
     # Trainer params
     p.add_argument("--epochs", type=int, default=20)
     p.add_argument("--lr", type=float, default=3e-4)
@@ -49,6 +59,10 @@ def parse_args():
 
 
 def sample_prompts(text: str, n: int = 3, length: int = 20) -> list[str]:
+    """
+    Axilary function. It samples prompts from the text if there are no prompts given.
+    In the main the text used is test dataset.
+    """
     if len(text) < length:
         raise ValueError(
             f"Text too short for prompt length {length} — "
@@ -60,12 +74,53 @@ def sample_prompts(text: str, n: int = 3, length: int = 20) -> list[str]:
     return [text[i : i + length] for i in starts]
 
 
+def prepare_prompts(
+    prompts: list[str], vocab: CharVocab, lower_case: bool
+) -> list[str]:
+    """
+    Checks that prompts consist of chars in vocab and removes invalid prompts.
+    If lower_case == True, it makes all promts lower case.
+    """
+
+    if lower_case:
+        prompts = [p.lower() for p in prompts]
+
+    valid = []
+    for prompt in prompts:
+        unknown = set(prompt) - set(vocab.chars)
+        if unknown:
+            print(f"[warning] dropping prompt {prompt!r} — unknown chars: {unknown}")
+        else:
+            valid.append(prompt)
+
+    if not valid:
+        print(
+            "No valid prompts remaining after vocabulary check. The text generation won't be done during training."
+        )
+
+    return valid
+
+
+def build_model_config(args: argparse.Namespace) -> dict:
+    """Assemble model config from CLI args."""
+    return {
+        "model": args.model,
+        "embed_size": args.embed_size,
+        "hidden_size": args.hidden_size,
+        "num_layers": args.num_layers,
+        "dropout": args.dropout,
+        "num_heads": args.num_heads,
+        "ffn_dim": args.ffn_dim,
+        "seq_len": args.seq_len,
+    }
+
+
 def main():
     args = parse_args()
     data_dir = Path(args.data_dir)
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     prompts = None
-    model_cfg = {}
+    model_cfg = build_model_config(args)
 
     match args.dataset:
         case "shakespeare":
@@ -78,7 +133,7 @@ def main():
 
     datasets = TextDataset.generate_test_train(
         file_path=data_dir / file_name,
-        seq_length=args.seq_length,
+        seq_len=args.seq_len,
         val_test_ratio=(args.val_ratio, args.test_ratio),
         lower_case=args.lower_case,
     )
@@ -123,14 +178,16 @@ def main():
     prompts = prompts or sample_prompts(
         datasets[2].text or ""
     )  # We sample_prompts from test text.
+    prompts = prepare_prompts(prompts=prompts, vocab=vocab, lower_case=args.lower_case)
+
     callbacks = [
         ConfigSaverCallback(
             optimizer=optimizer,
             scheduler=scheduler,  # pass None if not using one
         ),
-        ModelInfoCallback(),
+        ModelInfoCallback(vocab=vocab),
         EpochProgressCallback(),
-        BatchLogCallback(log_every=50),  # ← new
+        BatchLogCallback(log_every=None),
         EvalCallback(loaders["val"]),
         LogCallback(),
         CheckpointCallback(),
